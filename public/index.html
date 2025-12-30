@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShelfLife – Expiry Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- LOGIN PAGE -->
+        <div id="loginPage" class="card">
+            <h1>🍎 ShelfLife</h1>
+            <p class="subtitle">Track your food expiry dates and reduce waste!</p>
+            <div class="input-group">
+                <label>Your Name</label>
+                <input type="text" id="userName" placeholder="Enter your name">
+            </div>
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" id="userEmail" placeholder="Enter your email">
+            </div>
+            <button class="btn" onclick="handleLogin()">Get Started 🚀</button>
+        </div>
+
+        <!-- PROFILE PAGE -->
+        <div id="profilePage" class="card hidden">
+            <h1>🥗 Set Your Preference</h1>
+            <p class="subtitle">Help us personalize your experience</p>
+            <div class="preference-buttons">
+                <div class="preference-btn" onclick="selectPreference('veg')">
+                    <div style="font-size: 40px; margin-bottom: 10px;">🥦</div>
+                    <div>Vegetarian</div>
+                </div>
+                <div class="preference-btn" onclick="selectPreference('nonveg')">
+                    <div style="font-size: 40px; margin-bottom: 10px;">🍗</div>
+                    <div>Non-Vegetarian</div>
+                </div>
+            </div>
+            <button class="btn" onclick="savePreference()">Continue to Dashboard</button>
+        </div>
+
+        <!-- MAIN APP -->
+        <div id="mainApp" class="hidden">
+            <div class="user-info">
+                <div>
+                    <h2 id="welcomeUser"></h2>
+                    <p id="userPreference"></p>
+                </div>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+
+            <div class="nav">
+                <button class="nav-btn active" onclick="showSection('dashboard')">📊 Dashboard</button>
+                <button class="nav-btn" onclick="showSection('addProduct')">➕ Add Product</button>
+                <button class="nav-btn" onclick="showSection('expired')">🔴 Expired Items</button>
+            </div>
+
+            <!-- DASHBOARD SECTION -->
+            <div id="dashboardSection">
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" style="color: #4caf50;" id="freshCount">0</div>
+                        <div class="stat-label">Fresh Items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" style="color: #ff9800;" id="warningCount">0</div>
+                        <div class="stat-label">Expiring Soon</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" style="color: #f44336;" id="expiredCount">0</div>
+                        <div class="stat-label">Expired</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>🛒 All Products</h2>
+                    <div id="productList"></div>
+                </div>
+            </div>
+
+            <!-- ADD PRODUCT SECTION -->
+            <div id="addProductSection" class="card hidden">
+                <h2>➕ Add New Product</h2>
+                <p class="subtitle">Keep track of your groceries</p>
+                <div class="input-group">
+                    <label>Product Name</label>
+                    <input type="text" id="productName" placeholder="e.g., Milk, Bread, Eggs">
+                </div>
+                <div class="input-group">
+                    <label>Expiry Date</label>
+                    <input type="date" id="expiryDate">
+                </div>
+                <button class="btn" onclick="addProduct()">Add Product 🍎</button>
+            </div>
+
+            <!-- EXPIRED SECTION -->
+            <div id="expiredSection" class="card hidden">
+                <h2>🔴 Expired Items</h2>
+                <p class="subtitle">Items that need your attention</p>
+                <div id="expiredList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
