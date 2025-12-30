@@ -1,249 +1,228 @@
-// ================= GLOBAL VARIABLES =================
-let selectedPreference = '';
-let products = [];
+// ===============================
+// SUPABASE CONFIG
+// ===============================
+const SUPABASE_URL = "https://ovmncweiieblooihrbmg.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_N7299RC-cNXD8uMYirTSuw_pF8T3NFC";
 
-// ================= PAGE LOAD =================
-window.onload = function () {
-    const user = JSON.parse(localStorage.getItem('user'));
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
 
-    // Hide all sections first
-    hideAll();
-
-    if (!user) {
-        // No user → Login page
-        document.getElementById('loginPage').style.display = 'block';
-        return;
-    }
-
-    if (!user.preference) {
-        // User exists but no preference → Profile page
-        document.getElementById('profilePage').style.display = 'block';
-        return;
-    }
-
-    // User + preference → Main app
-    showMainApp();
+// ===============================
+// GLOBAL STATE
+// ===============================
+let currentUser = {
+  name: "",
+  email: "",
+  foodType: ""
 };
 
-// ================= UTIL =================
-function hideAll() {
-    document.getElementById('loginPage').style.display = 'none';
-    document.getElementById('profilePage').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'none';
-}
+// ===============================
+// PAGE ELEMENTS
+// ===============================
+const loginPage = document.getElementById("loginPage");
+const profilePage = document.getElementById("profilePage");
+const mainApp = document.getElementById("mainApp");
 
-// ================= LOGIN =================
+// ===============================
+// LOGIN
+// ===============================
 function handleLogin() {
-    const name = document.getElementById('userName').value.trim();
-    const email = document.getElementById('userEmail').value.trim();
+  const name = document.getElementById("userName").value.trim();
+  const email = document.getElementById("userEmail").value.trim();
 
-    if (!name || !email) {
-        alert('Please enter both name and email!');
-        return;
-    }
+  if (!name || !email) {
+    alert("Please enter name and email");
+    return;
+  }
 
-    fetch('/api/user/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email })
-    })
-        .then(res => res.json())
-        .then(data => {
-            localStorage.setItem('user', JSON.stringify(data.user));
+  currentUser.name = name;
+  currentUser.email = email;
 
-            hideAll();
-            document.getElementById('profilePage').style.display = 'block';
-        })
-        .catch(() => alert('Login failed'));
+  loginPage.classList.add("hidden");
+  profilePage.classList.remove("hidden");
 }
 
-// ================= PROFILE =================
-function selectPreference(pref) {
-    selectedPreference = pref;
+// ===============================
+// PROFILE
+// ===============================
+function selectPreference(type) {
+  currentUser.foodType = type;
 
-    document.querySelectorAll('.preference-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
+  document.querySelectorAll(".preference-btn").forEach(btn => {
+    btn.style.border = "2px solid transparent";
+  });
 
-    event.target.closest('.preference-btn').classList.add('active');
+  event.currentTarget.style.border = "2px solid green";
 }
 
-function savePreference() {
-    if (!selectedPreference) {
-        alert('Please select a preference!');
-        return;
-    }
+async function savePreference() {
+  if (!currentUser.foodType) {
+    alert("Please select veg or non-veg");
+    return;
+  }
 
-    const user = JSON.parse(localStorage.getItem('user'));
+  const { error } = await supabaseClient.from("users").insert([{
+    username: currentUser.name,
+    email: currentUser.email,
+    food_type: currentUser.foodType
+  }]);
 
-    fetch('/api/user/preference', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            email: user.email,
-            preference: selectedPreference
-        })
-    })
-        .then(res => res.json())
-        .then(data => {
-            localStorage.setItem('user', JSON.stringify(data.user));
-            showMainApp();
-        })
-        .catch(() => alert('Saving preference failed'));
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  profilePage.classList.add("hidden");
+  mainApp.classList.remove("hidden");
+
+  document.getElementById("welcomeUser").innerText =
+    `Hello, ${currentUser.name} 👋`;
+  document.getElementById("userPreference").innerText =
+    `Preference: ${currentUser.foodType}`;
+
+  showSection("dashboard");
+  loadProducts();
 }
 
-// ================= MAIN APP =================
-function showMainApp() {
-    hideAll();
-    document.getElementById('mainApp').style.display = 'block';
+// ===============================
+// NAVIGATION
+// ===============================
+function showSection(section) {
+  ["dashboardSection", "addProductSection", "expiredSection"].forEach(id =>
+    document.getElementById(id).classList.add("hidden")
+  );
 
-    loadUserData();
-    loadProducts();
+  document.querySelectorAll(".nav-btn").forEach(btn =>
+    btn.classList.remove("active")
+  );
+
+  if (section === "dashboard") {
+    document.getElementById("dashboardSection").classList.remove("hidden");
+    document.querySelectorAll(".nav-btn")[0].classList.add("active");
+  }
+
+  if (section === "addProduct") {
+    document.getElementById("addProductSection").classList.remove("hidden");
+    document.querySelectorAll(".nav-btn")[1].classList.add("active");
+  }
+
+  if (section === "expired") {
+    document.getElementById("expiredSection").classList.remove("hidden");
+    document.querySelectorAll(".nav-btn")[2].classList.add("active");
+  }
 }
 
-function loadUserData() {
-    const user = JSON.parse(localStorage.getItem('user'));
+// ===============================
+// ADD PRODUCT
+// ===============================
+async function addProduct() {
+  const product = document.getElementById("productName").value.trim();
+  const expiry = document.getElementById("expiryDate").value;
 
-    document.getElementById('welcomeUser').textContent = `Welcome, ${user.name}! 👋`;
+  if (!product || !expiry) {
+    alert("Enter product and expiry date");
+    return;
+  }
 
-    const prefText = user.preference === 'veg' ? '🥦 Vegetarian' : '🍗 Non-Vegetarian';
-    document.getElementById('userPreference').textContent = prefText;
+  const { error } = await supabaseClient.from("items").insert([{
+    product_name: product,
+    expiry_date: expiry,
+    user_email: currentUser.email
+  }]);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  document.getElementById("productName").value = "";
+  document.getElementById("expiryDate").value = "";
+
+  loadProducts();
+  showSection("dashboard");
 }
 
-// ================= PRODUCTS =================
-function loadProducts() {
-    const user = JSON.parse(localStorage.getItem('user'));
-
-    fetch(`/api/products/${user.email}`)
-        .then(res => res.json())
-        .then(data => {
-            products = data.products || [];
-            renderDashboard();
-        });
+// ===============================
+// DELETE PRODUCT
+// ===============================
+async function deleteProduct(id) {
+  await supabaseClient.from("items").delete().eq("id", id);
+  loadProducts();
 }
 
-function addProduct() {
-    const name = document.getElementById('productName').value.trim();
-    const expiryDate = document.getElementById('expiryDate').value;
+// ===============================
+// LOAD PRODUCTS + EXPIRY LOGIC
+// ===============================
+async function loadProducts() {
+  const { data } = await supabaseClient
+    .from("items")
+    .select("*")
+    .eq("user_email", currentUser.email);
 
-    if (!name || !expiryDate) {
-        alert('Please fill all fields!');
-        return;
-    }
+  const list = document.getElementById("productList");
+  const expiredList = document.getElementById("expiredList");
 
-    const user = JSON.parse(localStorage.getItem('user'));
+  list.innerHTML = "";
+  expiredList.innerHTML = "";
 
-    fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            userEmail: user.email,
-            name,
-            expiryDate
-        })
-    })
-        .then(res => res.json())
-        .then(() => {
-            document.getElementById('productName').value = '';
-            document.getElementById('expiryDate').value = '';
-            loadProducts();
-        });
-}
+  let fresh = 0, warning = 0, expired = 0;
+  const today = new Date();
 
-function deleteProduct(id) {
-    if (!confirm('Delete this product?')) return;
-
-    fetch(`/api/products/${id}`, { method: 'DELETE' })
-        .then(() => {
-            products = products.filter(p => p.id !== id);
-            renderDashboard();
-        });
-}
-
-// ================= DATE LOGIC =================
-function calculateDaysLeft(date) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const expiry = new Date(date);
-    expiry.setHours(0, 0, 0, 0);
-
-    return Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
-}
-
-function getStatus(days) {
-    if (days < 0) return 'expired';
-    if (days <= 3) return 'warning';
-    return 'fresh';
-}
-
-// ================= DASHBOARD =================
-function renderDashboard() {
-    const productList = document.getElementById('productList');
-    const expiredList = document.getElementById('expiredList');
-
-    productList.innerHTML = '';
-    expiredList.innerHTML = '';
-
-    let fresh = 0, warning = 0, expired = 0;
-
-    products.forEach(p => {
-        const days = calculateDaysLeft(p.expiryDate);
-        const status = getStatus(days);
-
-        if (status === 'fresh') fresh++;
-        if (status === 'warning') warning++;
-        if (status === 'expired') expired++;
-
-        productList.innerHTML += `
-            <div class="product-card ${status}">
-                <div>
-                    <h3>${p.name}</h3>
-                    <p>Expires: ${new Date(p.expiryDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                    <span class="days-left ${status}">
-                        ${status === 'expired' ? 'EXPIRED' : days + ' days'}
-                    </span>
-                    <button onclick="deleteProduct(${p.id})">🗑️</button>
-                </div>
-            </div>
-        `;
-    });
-
-    const expiredItems = products.filter(
-        p => getStatus(calculateDaysLeft(p.expiryDate)) === 'expired'
+  data.forEach(item => {
+    const expDate = new Date(item.expiry_date);
+    const daysLeft = Math.ceil(
+      (expDate - today) / (1000 * 60 * 60 * 24)
     );
 
-    expiredItems.forEach(p => {
-        expiredList.innerHTML += `
-            <div class="product-card expired">
-                <h3>${p.name}</h3>
-                <p>Expired</p>
-            </div>
-        `;
-    });
+    let statusText = "";
+    let color = "";
+    let emoji = "";
 
-    document.getElementById('freshCount').textContent = fresh;
-    document.getElementById('warningCount').textContent = warning;
-    document.getElementById('expiredCount').textContent = expired;
-}
+    if (daysLeft < 0) {
+      expired++;
+      statusText = "Expired";
+      color = "#f44336";
+      emoji = "❌";
 
-// ================= NAV =================
-function showSection(section) {
-    document.getElementById('dashboardSection').style.display = 'none';
-    document.getElementById('addProductSection').style.display = 'none';
-    document.getElementById('expiredSection').style.display = 'none';
-
-    if (section === 'dashboard') document.getElementById('dashboardSection').style.display = 'block';
-    if (section === 'addProduct') document.getElementById('addProductSection').style.display = 'block';
-    if (section === 'expired') document.getElementById('expiredSection').style.display = 'block';
-}
-
-// ================= LOGOUT =================
-function logout() {
-    if (confirm('Logout?')) {
-        localStorage.removeItem('user');
-        location.reload();
+      expiredList.innerHTML += `
+        <div class="product-card" style="border-left-color:${color}">
+          <div class="product-title">${emoji} ${item.product_name}</div>
+          <div class="product-status">Expired</div>
+          <button class="delete-btn" onclick="deleteProduct('${item.id}')">🗑️ Delete</button>
+        </div>
+      `;
+    } else if (daysLeft <= 3) {
+      warning++;
+      statusText = `Expiring Soon • ${daysLeft} day(s) left`;
+      color = "#ff9800";
+      emoji = "⚠️";
+    } else {
+      fresh++;
+      statusText = `Fresh • ${daysLeft} days left`;
+      color = "#4caf50";
+      emoji = "✅";
     }
+
+    list.innerHTML += `
+      <div class="product-card" style="border-left-color:${color}">
+        <div class="product-title">${emoji} ${item.product_name}</div>
+        <div class="product-status">${statusText}</div>
+        <button class="delete-btn" onclick="deleteProduct('${item.id}')">🗑️ Delete</button>
+      </div>
+    `;
+  });
+
+  document.getElementById("freshCount").innerText = fresh;
+  document.getElementById("warningCount").innerText = warning;
+  document.getElementById("expiredCount").innerText = expired;
+}
+
+
+// ===============================
+// LOGOUT
+// ===============================
+function logout() {
+  location.reload();
 }
